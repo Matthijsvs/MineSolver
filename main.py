@@ -1,5 +1,5 @@
 
-from mineField import MineField
+from mineField import MineField,ExplosionException
 from mineField import BEGINNER_FIELD,INTERMEDIATE_FIELD,EXPERT_FIELD
 from enum import IntEnum
 from collections import namedtuple
@@ -40,20 +40,36 @@ class Solver:
 		
 		#Solving logic
 		walklist = [Point(0,0)] # we start walking in the topleft corner
-		while len(walklist)>0:
-		
-			#State 1: sweep all squares without adjacent mines
-			pt = walklist.pop()	
-			self.walk(pt) 
-			
-			#State 2: find all squares with adjacent mines
-			for x in range(self.w):
-				for y in range(self.h):
-					if self.chart[y][x] >= Cell.OneBombAdjacent: #this cell has one or more adjacent mines
-						walklist.extend(self.count(Point(x,y)))
-
-		self.pprint()
-		return self.mines
+		try:
+			while self.mines_left>0:
+				while len(walklist)>0:
+				
+					#State 1: sweep all squares without adjacent mines
+					pt = walklist.pop()	
+					self.walk(pt) 
+					
+					#State 2: find all squares with adjacent mines
+					for x in range(self.w):
+						for y in range(self.h):
+							if self.chart[y][x] >= Cell.OneBombAdjacent: #this cell has one or more adjacent mines
+								walklist.extend(self.count(Point(x,y)))
+				#We have walked all squares without guesswork.
+				#Larger grids might not be solvable without guessing. add more points to the walklist until mines_left = 0 (or you explode ;) )
+				
+				if self.mines_left>0:
+					self.pprint()
+					for x in range(self.w-1,0,-1):
+							for y in range(self.h-1,0,-1):
+								if self.chart[y][x] >= Cell.Unknown: #Not opened before
+									walklist.append(Point(x,y))
+									logging.warning(f"Took a guess! {Point(x,y)}!")
+									continue
+								
+			self.pprint()
+		except:
+			pass
+		finally:
+			return self.mines
 
 	def walk(self,pos):
 		'''Sweep a cell, and walk all empty neighbours'''
@@ -83,12 +99,13 @@ class Solver:
 			logging.error(f"Bomb at ({pos}) exploded!")
 			self.chart[pos.y][pos.x]=Cell.Bomb
 			self.mines.append(pos)
-			return
+			raise Exception('Game ended')
 
 			
 	def count(self,pos):
-		'''Build a list all neighbours'''
-		neighbours=[]
+		'''Count neighbours and deduce locations'''
+
+		neighbours=[] #all neigbour cells
 		neighbours.append(Point(pos.x-1,pos.y-1))
 		neighbours.append(Point(pos.x,pos.y-1))
 		neighbours.append(Point(pos.x+1,pos.y-1))
