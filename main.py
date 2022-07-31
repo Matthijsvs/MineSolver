@@ -55,20 +55,24 @@ class Solver:
 								walklist.extend(self.count(Point(x,y)))
 				#We have walked all squares without guesswork.
 				#Larger grids might not be solvable without guessing. add more points to the walklist until mines_left = 0 (or you explode ;) )
-				
+				#for now the simplest way is to start on the oposite side of the grid. 
 				if self.mines_left>0:
-					self.pprint()
 					for x in range(self.w-1,0,-1):
+							found = False
 							for y in range(self.h-1,0,-1):
-								if self.chart[y][x] >= Cell.Unknown: #Not opened before
+								if self.chart[y][x] == Cell.Unknown: #Not opened before
 									walklist.append(Point(x,y))
 									logging.warning(f"Took a guess! {Point(x,y)}!")
-									continue
+									found = True
+									break
+							if found:
+								break
 								
-			self.pprint()
+
 		except:
 			pass
 		finally:
+			self.pprint()
 			return self.mines
 
 	def walk(self,pos):
